@@ -65,9 +65,8 @@ class SingleLinkedList
         }
 
         BasicIterator& operator++() noexcept {
-            if (node_ != nullptr) {
-                node_ = node_->next_node;
-            }
+            assert(node_ != nullptr);
+            node_ = node_->next_node;
             return *this;
         }
 
@@ -78,10 +77,12 @@ class SingleLinkedList
         }
 
         [[nodiscard]] reference operator*() const noexcept {
+            assert(node_ != nullptr);
             return node_->value;
         }
 
         [[nodiscard]] pointer operator->() const noexcept {
+            assert(node_ != nullptr);
             return &node_->value;
         }
 
@@ -103,9 +104,11 @@ public:
         ++size_;
     }
 
-    void PushBack(const Type& value) {
+    void PushBack(const Type& value)
+    {
         Node* lnode = new Node(value, nullptr);
-        if (head_.next_node == nullptr) {
+        if (head_.next_node == nullptr)
+        {
             head_.next_node = lnode;
         }
         else {
@@ -120,6 +123,7 @@ public:
 
     void PopFront() noexcept
     {
+        assert(size_ > 0);
         Node* temp_node = head_.next_node;
         head_.next_node = head_.next_node->next_node;
         delete temp_node;
@@ -139,14 +143,14 @@ public:
     }
 
     [[nodiscard]] bool IsEmpty() const noexcept {
-        return (size_ == 0) ? true : false;
+        return (size_ == 0);
     }
 
-    SingleLinkedList(std::initializer_list<Type> values) {
+    SingleLinkedList(std::initializer_list<Type> values)
+    {
         size_ = 0;
-        for (auto i = values.begin(); i != values.end(); ++i) {
-            PushBack(*i);
-        }
+
+        PushBackValues(values);
     }
 
     SingleLinkedList(const SingleLinkedList& other) {
@@ -154,9 +158,8 @@ public:
 
         SingleLinkedList tmp;
 
-        for (auto i = other.begin(); i != other.end(); ++i) {
-            tmp.PushBack(*i);
-        }
+        tmp.PushBackValues(other);
+
         swap(tmp);
     }
 
@@ -182,13 +185,9 @@ public:
     using Iterator = BasicIterator<Type>;
     using ConstIterator = BasicIterator<const Type>;
 
-
     Iterator InsertAfter(ConstIterator pos, const Type& value) {
-        if (pos == end()) {
-            PushBack(value);
-            return Iterator(end());
-        }
-
+        
+        assert(pos.node_ != nullptr);
         Node* new_node = new Node(value, pos.node_->next_node);
         pos.node_->next_node = new_node;
         ++size_;
@@ -197,6 +196,7 @@ public:
 
     Iterator EraseAfter(ConstIterator pos) noexcept
     {
+        assert(pos.node_ != nullptr && pos.node_->next_node != nullptr && size_>0);
         Node* deleting_node = pos.node_->next_node;
         pos.node_->next_node = pos.node_->next_node->next_node;
         delete deleting_node;
@@ -223,35 +223,23 @@ public:
     }
 
     [[nodiscard]] Iterator end() noexcept {
-        auto end_node = head_.next_node;
-        while (end_node != nullptr) {
-            end_node = end_node->next_node;
-        }
-        return Iterator{ end_node };
+        return Iterator{ nullptr };
     }
 
     [[nodiscard]] ConstIterator begin() const noexcept {
-        return ConstIterator{ head_.next_node };
+        return cbegin();
     }
 
     [[nodiscard]] ConstIterator end() const noexcept {
-        auto end_node = head_.next_node;
-        while (end_node != nullptr) {
-            end_node = end_node->next_node;
-        }
-        return ConstIterator{ end_node };
+        return cend();
     }
-
+    
     [[nodiscard]] ConstIterator cbegin() const noexcept {
         return ConstIterator{ head_.next_node };
     }
 
-    [[nodiscard]] ConstIterator cend() const noexcept {
-        auto end_node = head_.next_node;
-        while (end_node != nullptr) {
-            end_node = end_node->next_node;
-        }
-        return ConstIterator{ end_node };
+    [[nodiscard]] ConstIterator cend() const {
+        return ConstIterator{ nullptr };
     }
 
 private:
@@ -259,6 +247,15 @@ private:
     Node head_;
     size_t size_ = 0u;
 
+    template <typename Type>
+    void PushBackValues(Type values)
+    {
+        for (auto i = values.begin(); i != values.end(); ++i)
+        {
+            PushBack(*i);
+        }
+    }
+    
 };
 
 template <typename Type>
@@ -267,13 +264,24 @@ void swap(SingleLinkedList<Type>& lhs, SingleLinkedList<Type>& rhs) noexcept {
 }
 
 template <typename Type>
-bool operator==(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& rhs) {
+bool operator==(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& rhs) 
+{
+    if (&lhs == &rhs) 
+    {
+        return true;
+    }
+
+    if (lhs.GetSize() != rhs.GetSize()) 
+    {
+        return false;
+    }
+    
     return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
 }
 
 template <typename Type>
 bool operator!=(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& rhs) {
-    return !std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
+    return !(lhs == rhs);
 }
 
 template <typename Type>
@@ -284,160 +292,16 @@ bool operator<(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& 
 
 template <typename Type>
 bool operator<=(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& rhs) {
-    return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end())
-        || std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
+    return !(rhs<lhs);
 }
 
 template <typename Type>
 bool operator>(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& rhs) {
-    return std::lexicographical_compare(rhs.begin(), rhs.end(), lhs.begin(), lhs.end());
+    return !(lhs<=rhs);
 }
 
 template <typename Type>
 bool operator>=(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& rhs)
 {
-    return std::lexicographical_compare(rhs.begin(), rhs.end(), lhs.begin(), lhs.end())
-        || std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
-}
-
-void Test4()
-{
-    struct DeletionSpy {
-        ~DeletionSpy() {
-            if (deletion_counter_ptr) {
-                ++(*deletion_counter_ptr);
-            }
-        }
-        int* deletion_counter_ptr = nullptr;
-    };
-
-    {
-        SingleLinkedList<int> numbers{ 3, 14, 15, 92, 6 };
-        numbers.PopFront();
-        assert((numbers == SingleLinkedList<int>{14, 15, 92, 6}));
-
-        SingleLinkedList<DeletionSpy> list;
-        list.PushFront(DeletionSpy{});
-        int deletion_counter = 0;
-        list.begin()->deletion_counter_ptr = &deletion_counter;
-        assert(deletion_counter == 0);
-        list.PopFront();
-        assert(deletion_counter == 1);
-    }
-
-    {
-        SingleLinkedList<int> empty_list;
-        const auto& const_empty_list = empty_list;
-        assert(empty_list.before_begin() == empty_list.cbefore_begin());
-        assert(++empty_list.before_begin() == empty_list.begin());
-        assert(++empty_list.cbefore_begin() == const_empty_list.begin());
-
-        SingleLinkedList<int> numbers{ 1, 2, 3, 4 };
-        const auto& const_numbers = numbers;
-        assert(numbers.before_begin() == numbers.cbefore_begin());
-        assert(++numbers.before_begin() == numbers.begin());
-        assert(++numbers.cbefore_begin() == const_numbers.begin());
-    }
-
-    {
-        {
-            SingleLinkedList<int> lst;
-            const auto inserted_item_pos = lst.InsertAfter(lst.before_begin(), 123);
-            assert((lst == SingleLinkedList<int>{123}));
-            assert(inserted_item_pos == lst.begin());
-            assert(*inserted_item_pos == 123);
-        }
-
-        {
-            SingleLinkedList<int> lst{ 1, 2, 3 };
-            auto inserted_item_pos = lst.InsertAfter(lst.before_begin(), 123);
-
-            assert(inserted_item_pos == lst.begin());
-            assert(inserted_item_pos != lst.end());
-            assert(*inserted_item_pos == 123);
-            assert((lst == SingleLinkedList<int>{123, 1, 2, 3}));
-
-            inserted_item_pos = lst.InsertAfter(lst.begin(), 555);
-            assert(++SingleLinkedList<int>::Iterator(lst.begin()) == inserted_item_pos);
-            assert(*inserted_item_pos == 555);
-            assert((lst == SingleLinkedList<int>{123, 555, 1, 2, 3}));
-        };
-    }
-
-    struct ThrowOnCopy {
-        ThrowOnCopy() = default;
-        explicit ThrowOnCopy(int& copy_counter) noexcept
-            : countdown_ptr(&copy_counter) {
-        }
-        ThrowOnCopy(const ThrowOnCopy& other)
-            : countdown_ptr(other.countdown_ptr)  //
-        {
-            if (countdown_ptr) {
-                if (*countdown_ptr == 0) {
-                    throw std::bad_alloc();
-                }
-                else {
-                    --(*countdown_ptr);
-                }
-            }
-        }
-
-        ThrowOnCopy& operator=(const ThrowOnCopy& rhs) = delete;
-
-        int* countdown_ptr = nullptr;
-    };
-
-    {
-        bool exception_was_thrown = false;
-        for (int max_copy_counter = 10; max_copy_counter >= 0; --max_copy_counter) {
-            SingleLinkedList<ThrowOnCopy> list{ ThrowOnCopy{}, ThrowOnCopy{}, ThrowOnCopy{} };
-            try {
-                int copy_counter = max_copy_counter;
-                list.InsertAfter(list.cbegin(), ThrowOnCopy(copy_counter));
-                assert(list.GetSize() == 4u);
-            }
-            catch (const std::bad_alloc&) {
-                exception_was_thrown = true;
-                assert(list.GetSize() == 3u);
-                break;
-            }
-        }
-        assert(exception_was_thrown);
-    }
-
-    {
-        {
-            SingleLinkedList<int> lst{ 1, 2, 3, 4 };
-            const auto& const_lst = lst;
-            const auto item_after_erased = lst.EraseAfter(const_lst.cbefore_begin());
-            assert((lst == SingleLinkedList<int>{2, 3, 4}));
-            assert(item_after_erased == lst.begin());
-        }
-        {
-            SingleLinkedList<int> lst{ 1, 2, 3, 4 };
-            const auto item_after_erased = lst.EraseAfter(lst.cbegin());
-            assert((lst == SingleLinkedList<int>{1, 3, 4}));
-            assert(item_after_erased == (++lst.begin()));
-        }
-        {
-            SingleLinkedList<int> lst{ 1, 2, 3, 4 };
-            const auto item_after_erased = lst.EraseAfter(++(++lst.cbegin()));
-            assert((lst == SingleLinkedList<int>{1, 2, 3}));
-            assert(item_after_erased == lst.end());
-        }
-        {
-            SingleLinkedList<DeletionSpy> list{ DeletionSpy{}, DeletionSpy{}, DeletionSpy{} };
-            auto after_begin = ++list.begin();
-            int deletion_counter = 0;
-            after_begin->deletion_counter_ptr = &deletion_counter;
-            assert(deletion_counter == 0u);
-            list.EraseAfter(list.cbegin());
-            assert(deletion_counter == 1u);
-        }
-    }
-}
-
-int main()
-{
-    Test4();
+    return !(lhs<rhs);
 }
