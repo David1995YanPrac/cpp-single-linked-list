@@ -10,7 +10,6 @@
 template <typename Type>
 class SingleLinkedList
 {
-
     struct Node
     {
         Node() = default;
@@ -90,45 +89,27 @@ class SingleLinkedList
         Node* node_ = nullptr;
     };
 
-
 public:
 
     SingleLinkedList() :size_(0u) { size_ = 0u; };
 
-    ~SingleLinkedList() 
+    ~SingleLinkedList()
     {
         Clear();
     }
 
-    void PushFront(const Type& value) 
+    void PushFront(const Type& value)
     {
         head_.next_node = new Node(value, head_.next_node);
         ++size_;
     }
 
-    void PushBack(const Type& value)
-    {
-        Node* lnode = new Node(value, nullptr);
-        if (head_.next_node == nullptr)
-        {
-            head_.next_node = lnode;
-        }
-        else {
-            Node* end_node = head_.next_node;
-            for (int i = 0; i != size_ - 1; ++i) {
-                end_node = end_node->next_node;
-            }
-            end_node->next_node = lnode;
-        }
-        ++size_;
-    }
-
     void PopFront() noexcept
     {
-        assert(size_ > 0);
         Node* temp_node = head_.next_node;
         head_.next_node = head_.next_node->next_node;
         delete temp_node;
+        --size_;
     }
 
     void Clear() noexcept {
@@ -147,18 +128,16 @@ public:
     [[nodiscard]] bool IsEmpty() const noexcept {
         return (size_ == 0);
     }
-
     
-    SingleLinkedList(std::initializer_list<Type> values)
-    {
+    SingleLinkedList(std::initializer_list<Type> values){
         PushBackValues(values);
     }
+    
 
     SingleLinkedList(const SingleLinkedList& other) {
-
         PushBackValues(other);
     }
-
+    
     SingleLinkedList& operator=(const SingleLinkedList& rhs)
     {
         if (this != &rhs) {
@@ -196,6 +175,7 @@ public:
         Node* deleting_node = pos.node_->next_node;
         pos.node_->next_node = pos.node_->next_node->next_node;
         delete deleting_node;
+        --size_;
         return Iterator(pos.node_->next_node);
     }
 
@@ -243,19 +223,24 @@ private:
     Node head_;
     size_t size_ = 0u;
 
+    template <typename Type>
     void PushBackValues(std::initializer_list<Type> values)
     {
-        Node* tmp_head = &head_;
+        SingleLinkedList<Type> tmp_list;
+
+        Node* tmp_head = &tmp_list.head_;
 
         for (const Type& value : values)
         {
             tmp_head->next_node = new Node(value, nullptr);
             tmp_head = tmp_head->next_node;
+            ++tmp_list.size_;
         }
 
-        size_ = values.size();
-    }
+        tmp_list.swap(*this);
 
+        size_ += tmp_list.size_;
+    }
 };
 
 template <typename Type>
